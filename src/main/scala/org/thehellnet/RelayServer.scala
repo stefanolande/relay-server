@@ -4,7 +4,7 @@ import cats.effect._
 import cats.effect.std.Console
 import cats.syntax.all._
 import org.thehellnet.model.RadioClient
-import org.thehellnet.service.{ClientRegisterer, RelayService}
+import org.thehellnet.service.{ClientRegistrationService, RelayService}
 
 import java.net.DatagramSocket
 
@@ -15,13 +15,13 @@ object RelayServer extends IOApp {
     val clientsSocket = new DatagramSocket(Config.CLIENTS_PORT)
     val radioSocket   = new DatagramSocket(Config.AUDIO_PORT)
 
-    val clientRegisterer = new ClientRegisterer(clientsSocket)
-    val relayService     = new RelayService(radioSocket, clientsSocket)
+    val clientRegistrationService = new ClientRegistrationService(clientsSocket)
+    val relayService              = new RelayService(radioSocket, clientsSocket)
 
     for {
       clientsR <- Ref.of[IO, Set[RadioClient]](Set.empty)
-      res <- (relayService.expireClients(clientsR),
-              clientRegisterer.receiveClient(clientsR),
+      res <- (clientRegistrationService.expireClients(clientsR),
+              clientRegistrationService.receiveClient(clientsR),
               relayService.forwardPacket(clientsR))
         .parMapN((_, _, _) => ExitCode.Success)
         .handleErrorWith { t =>
