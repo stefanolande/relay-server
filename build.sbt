@@ -1,10 +1,10 @@
 ThisBuild / version := "0.1.0-SNAPSHOT"
-
 ThisBuild / scalaVersion := "2.13.7"
 
 lazy val root = (project in file("."))
   .settings(
-    name := "RelayServer"
+    name := "RelayServer",
+    assembly / assemblyJarName := "radioware-relay-server.jar",
   )
 
 val fs2Version        = "3.2.2"
@@ -25,3 +25,8 @@ scalacOptions ++= Seq(
   "-unchecked",
   "-language:postfixOps"
 )
+
+assemblyMergeStrategy in assembly := {
+  case PathList("META-INF", xs @ _*) => MergeStrategy.discard
+  case x                             => MergeStrategy.first
+}
