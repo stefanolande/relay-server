@@ -1,0 +1,17 @@
+*.class
+*.log
+*.DS_Store
+.bsp
+.cache
+.env
+.idea
+.lib
+.terraform
+dist/*
+test-reports/*
+target
+/newman
+node_modules
+
+.docker-*
+*-stack.yaml
