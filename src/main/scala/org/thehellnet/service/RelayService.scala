@@ -23,7 +23,7 @@ class RelayService(radioSocket: DatagramSocket, clientsSocket: DatagramSocket) {
     val packet = new DatagramPacket(buffer, buffer.length)
 
     for {
-      _ <- IO(radioSocket.receive(packet))
+      _ <- IO.blocking(radioSocket.receive(packet))
       _ = logger.info(s"received audio packet")
       clients <- clientsR.get
       _       <- clients.toList.map(forwardPacketToClient(_, packet)).sequence
@@ -33,7 +33,7 @@ class RelayService(radioSocket: DatagramSocket, clientsSocket: DatagramSocket) {
 
   private def forwardPacketToClient(radioClient: RadioClient, packet: DatagramPacket): IO[Unit] = {
     val clientPacket = new DatagramPacket(packet.getData, PACKET_SIZE, radioClient.ip, radioClient.port)
-    IO(clientsSocket.send(clientPacket))
+    IO.blocking(clientsSocket.send(clientPacket))
   }
 
 }

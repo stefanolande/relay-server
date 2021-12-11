@@ -21,7 +21,7 @@ class ClientRegistrationService(socket: DatagramSocket) {
     val packet = new DatagramPacket(buffer, buffer.length)
 
     for {
-      _ <- IO(socket.receive(packet))
+      _ <- IO.blocking(socket.receive(packet))
       _      = logger.info(s"received from ${packet.getAddress}")
       client = RadioClient(packet.getAddress, packet.getPort, LocalDateTime.now)
       _ <- clientsR.getAndUpdate(_ + client)
