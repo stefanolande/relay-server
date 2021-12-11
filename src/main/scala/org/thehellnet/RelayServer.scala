@@ -15,8 +15,7 @@ object RelayServer extends IOApp.Simple {
 
   private val logger: StructuredLogger[IO] = Slf4jLogger.getLogger
 
-  val run: IO[Unit] = {
-
+  override def run(args: List[String]): IO[ExitCode] = {
     val resources = for {
       clientsSocketR <- Resource.fromAutoCloseable(IO(new DatagramSocket(Config.CLIENTS_PORT)))
       radioSocketR   <- Resource.fromAutoCloseable(IO(new DatagramSocket(Config.AUDIO_PORT)))
@@ -35,14 +34,14 @@ object RelayServer extends IOApp.Simple {
 
         for {
           clientsR <- Ref.of[IO, Set[RadioClient]](Set.empty)
-          res <- (clientRegistrationService.expireClients(clientsR),
-                  clientRegistrationService.receiveClient(clientsR),
-                  relayService.forwardPacket(clientsR))
+          result <- (clientRegistrationService.expireClients(clientsR),
+                     clientRegistrationService.receiveClient(clientsR),
+                     relayService.forwardPacket(clientsR))
             .parMapN((_, _, _) => ExitCode.Success)
             .handleErrorWith { t =>
-              logger.error(s"Error caught: ${t.getMessage}").as(ExitCode.Error)
+              logger.error(t)(s"Error caught: ${t.getMessage}").as(ExitCode.Error)
             }
-        } yield res
+        } yield result
     }
   }
 
