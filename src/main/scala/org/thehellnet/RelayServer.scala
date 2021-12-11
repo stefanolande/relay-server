@@ -3,7 +3,7 @@ package org.thehellnet
 import cats.effect._
 import cats.syntax.all._
 import org.thehellnet.model.RadioClient
-import org.thehellnet.network.{AudioConnection, RadioClientConnection}
+import org.thehellnet.network.{AudioChannel, RadioClientChannel}
 import org.thehellnet.network.socket.SocketConnection
 import org.thehellnet.service.{ClientRegistrationService, RelayService}
 import org.typelevel.log4cats.StructuredLogger
@@ -27,11 +27,11 @@ object RelayServer extends IOApp.Simple {
         val clientSocketConnection = new SocketConnection(clientsSocket)
         val radioSocketConnection  = new SocketConnection(radioSocket)
 
-        val audioConnection       = new AudioConnection(radioSocketConnection)
-        val radioClientConnection = new RadioClientConnection(clientSocketConnection)
+        val audioChannel       = new AudioChannel(radioSocketConnection)
+        val radioClientChannel = new RadioClientChannel(clientSocketConnection)
 
-        val clientRegistrationService = new ClientRegistrationService(radioClientConnection)
-        val relayService              = new RelayService(audioConnection, radioClientConnection)
+        val clientRegistrationService = new ClientRegistrationService(radioClientChannel)
+        val relayService              = new RelayService(audioChannel, radioClientChannel)
 
         for {
           clientsR <- Ref.of[IO, Set[RadioClient]](Set.empty)

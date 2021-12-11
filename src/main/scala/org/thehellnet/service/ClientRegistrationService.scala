@@ -1,26 +1,23 @@
 package org.thehellnet.service
 
 import cats.effect.{IO, Ref}
-import org.thehellnet.Config
 import org.thehellnet.model.RadioClient
-import org.thehellnet.network.{AudioConnection, RadioClientConnection}
-import org.thehellnet.network.socket.SocketConnection
+import org.thehellnet.network.RadioClientChannel
 import org.typelevel.log4cats.StructuredLogger
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 
-import java.net.{DatagramPacket, DatagramSocket}
 import java.time.LocalDateTime
 import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.FiniteDuration
 
-class ClientRegistrationService(radioClientConnection: RadioClientConnection) {
+class ClientRegistrationService(radioClientChannel: RadioClientChannel) {
 
   private val logger: StructuredLogger[IO] = Slf4jLogger.getLogger
 
   def receiveClient(clientsR: Ref[IO, Set[RadioClient]]): IO[Unit] =
     for {
-      client <- radioClientConnection.receive()
+      client <- radioClientChannel.receive()
       _      <- logger.info(s"received client $client")
       _      <- clientsR.getAndUpdate(_ + client)
       _      <- receiveClient(clientsR)

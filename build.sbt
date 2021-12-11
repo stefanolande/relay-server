@@ -30,3 +30,5 @@ assembly / assemblyMergeStrategy := {
   case PathList("META-INF", _ @_*) => MergeStrategy.discard
   case _                           => MergeStrategy.first
 }
+
+run / fork := true

@@ -10,7 +10,7 @@ import org.typelevel.log4cats.slf4j.Slf4jLogger
 import java.net.DatagramPacket
 import java.time.LocalDateTime
 
-class RadioClientConnection(socketConnection: SocketConnection) {
+class RadioClientChannel(socketConnection: SocketConnection) {
 
   private val logger: StructuredLogger[IO] = Slf4jLogger.getLogger
 

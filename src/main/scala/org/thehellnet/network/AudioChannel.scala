@@ -4,7 +4,7 @@ import cats.effect.IO
 import org.thehellnet.model.AudioData
 import org.thehellnet.network.socket.SocketConnection
 
-class AudioConnection(socketConnection: SocketConnection) {
+class AudioChannel(socketConnection: SocketConnection) {
 
   def receive(): IO[AudioData] =
     for {
