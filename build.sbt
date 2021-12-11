@@ -31,4 +31,4 @@ assembly / assemblyMergeStrategy := {
   case _                           => MergeStrategy.first
 }
 
-run / fork := true
+fork := true
