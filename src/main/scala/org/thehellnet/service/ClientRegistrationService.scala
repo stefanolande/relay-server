@@ -1,6 +1,7 @@
 package org.thehellnet.service
 
 import cats.effect.{IO, Ref}
+import org.thehellnet.Config
 import org.thehellnet.model.RadioClient
 import org.thehellnet.network.RadioClientChannel
 import org.typelevel.log4cats.StructuredLogger
@@ -25,14 +26,18 @@ class ClientRegistrationService(radioClientChannel: RadioClientChannel) {
 
   def expireClients(clientsR: Ref[IO, Set[RadioClient]]): IO[Unit] =
     for {
-      activeClients <- clientsR.modify { list =>
-        val now               = LocalDateTime.now
-        val notExpiredClients = list.filter(_.receivedAt.plus(10, ChronoUnit.SECONDS).isAfter(now))
-        (notExpiredClients, list)
+      activeClients <- clientsR.modify { clientsList =>
+        val notExpiredClients = clientsList.filter(isAlive)
+        (notExpiredClients, clientsList)
       }
       _ <- logger.info(s"active clients ${activeClients.mkString("[", ",", "]")}")
       _ <- IO.sleep(FiniteDuration(1, TimeUnit.SECONDS))
       _ <- expireClients(clientsR)
     } yield ()
+
+  private def isAlive(radioClient: RadioClient): Boolean = {
+    val now = LocalDateTime.now
+    radioClient.receivedAt.plus(Config.CLIENT_TTL, ChronoUnit.SECONDS).isAfter(now)
+  }
 
 }
