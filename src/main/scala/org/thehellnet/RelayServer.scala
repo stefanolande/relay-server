@@ -3,6 +3,7 @@ package org.thehellnet
 import cats.effect._
 import cats.syntax.all._
 import org.thehellnet.model.RadioClient
+import org.thehellnet.model.valueclass.ClientUpdateTime
 import org.thehellnet.network.{AudioChannel, RadioClientChannel}
 import org.thehellnet.network.socket.SocketConnection
 import org.thehellnet.service.{ClientRegistrationService, RelayService}
@@ -11,11 +12,12 @@ import org.typelevel.log4cats.slf4j.Slf4jLogger
 
 import java.net.DatagramSocket
 
-object RelayServer extends IOApp.Simple {
+object RelayServer extends IOApp {
 
   private val logger: StructuredLogger[IO] = Slf4jLogger.getLogger
 
   override def run(args: List[String]): IO[ExitCode] = {
+
     val resources = for {
       clientsSocketR <- Resource.fromAutoCloseable(IO(new DatagramSocket(Config.CLIENTS_PORT)))
       radioSocketR   <- Resource.fromAutoCloseable(IO(new DatagramSocket(Config.AUDIO_PORT)))
@@ -33,15 +35,13 @@ object RelayServer extends IOApp.Simple {
         val relayService              = new RelayService(audioChannel, radioClientChannel)
 
         for {
-          clientsR <- Ref.of[IO, Set[RadioClient]](Set.empty)
-          result <- (clientRegistrationService.expireClients(clientsR),
-                     clientRegistrationService.receiveClient(clientsR),
-                     relayService.forwardPacket(clientsR))
-            .parMapN((_, _, _) => ExitCode.Success)
-            .handleErrorWith { t =>
-              logger.error(t)(s"Error caught: ${t.getMessage}").as(ExitCode.Error)
-            }
-        } yield result
+          clientsR <- Ref.of[IO, Map[RadioClient, ClientUpdateTime]](Map.empty)
+          _ <- (clientRegistrationService.expireClients(clientsR),
+                clientRegistrationService.receiveClient(clientsR),
+                relayService.forwardPacket(clientsR)).parTupled.handleErrorWith { t =>
+            logger.error(t)(s"Error caught: ${t.getMessage}").as(ExitCode.Error)
+          }
+        } yield ExitCode.Success
     }
   }
 

@@ -11,7 +11,7 @@ class SocketConnection(socket: DatagramSocket) {
   def receive(): IO[DatagramPacket] = {
     val buffer = new Array[Byte](Config.PACKET_SIZE)
     val packet = new DatagramPacket(buffer, buffer.length)
-    IO.blocking(socket.receive(packet)) >> packet.pure[IO]
+    IO.interruptible(socket.receive(packet)) >> packet.pure[IO]
   }
 
   def send(datagramPacket: DatagramPacket): IO[Unit] =

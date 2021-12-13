@@ -1,6 +1,7 @@
 package org.thehellnet.model
 
-import java.net.InetAddress
-import java.time.LocalDateTime
+import org.thehellnet.model.valueclass.Port
 
-case class RadioClient(ip: InetAddress, port: Int, receivedAt: LocalDateTime)
+import java.net.InetAddress
+
+case class RadioClient(ip: InetAddress, port: Port)
