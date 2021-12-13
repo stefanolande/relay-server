@@ -3,6 +3,7 @@ package org.thehellnet
 import cats.effect._
 import cats.syntax.all._
 import org.thehellnet.model.RadioClient
+import org.thehellnet.model.valueclass.ClientUpdateTime
 import org.thehellnet.network.{AudioChannel, RadioClientChannel}
 import org.thehellnet.network.socket.SocketConnection
 import org.thehellnet.service.{ClientRegistrationService, RelayService}
@@ -34,7 +35,7 @@ object RelayServer extends IOApp {
         val relayService              = new RelayService(audioChannel, radioClientChannel)
 
         for {
-          clientsR <- Ref.of[IO, Set[RadioClient]](Set.empty)
+          clientsR <- Ref.of[IO, Map[RadioClient, ClientUpdateTime]](Map.empty)
           _ <- (clientRegistrationService.expireClients(clientsR),
                 clientRegistrationService.receiveClient(clientsR),
                 relayService.forwardPacket(clientsR)).parTupled.handleErrorWith { t =>
