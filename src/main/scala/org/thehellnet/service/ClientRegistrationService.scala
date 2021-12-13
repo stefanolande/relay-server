@@ -20,15 +20,15 @@ class ClientRegistrationService(radioClientChannel: RadioClientChannel) {
     for {
       client <- radioClientChannel.receive()
       _      <- logger.info(s"received client $client")
-      _      <- clientsR.getAndUpdate(_ + client)
+      _      <- clientsR.getAndUpdate(addOrUpdateClients(client, _))
       _      <- receiveClient(clientsR)
     } yield ()
 
   def expireClients(clientsR: Ref[IO, Set[RadioClient]]): IO[Unit] =
     for {
-      activeClients <- clientsR.modify { clientsList =>
-        val notExpiredClients = clientsList.filter(isAlive)
-        (notExpiredClients, clientsList)
+      activeClients <- clientsR.modify { clientsSet =>
+        val notExpiredClients = clientsSet.filter(isAlive)
+        (notExpiredClients, clientsSet)
       }
       _ <- logger.info(s"active clients ${activeClients.mkString("[", ",", "]")}")
       _ <- IO.sleep(FiniteDuration(1, TimeUnit.SECONDS))
@@ -39,5 +39,10 @@ class ClientRegistrationService(radioClientChannel: RadioClientChannel) {
     val now = LocalDateTime.now
     radioClient.receivedAt.plus(Config.CLIENT_TTL, ChronoUnit.SECONDS).isAfter(now)
   }
+
+  private def addOrUpdateClients(newClient: RadioClient, clientsSet: Set[RadioClient]): Set[RadioClient] =
+    clientsSet.filterNot { registeredClient =>
+      (registeredClient.ip, registeredClient.port) == (newClient.ip, newClient.port)
+    } + newClient
 
 }

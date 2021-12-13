@@ -35,14 +35,12 @@ object RelayServer extends IOApp {
 
         for {
           clientsR <- Ref.of[IO, Set[RadioClient]](Set.empty)
-          result <- (clientRegistrationService.expireClients(clientsR),
-                     clientRegistrationService.receiveClient(clientsR),
-                     relayService.forwardPacket(clientsR))
-            .parMapN((_, _, _) => ExitCode.Success)
-            .handleErrorWith { t =>
-              logger.error(t)(s"Error caught: ${t.getMessage}").as(ExitCode.Error)
-            }
-        } yield result
+          _ <- (clientRegistrationService.expireClients(clientsR),
+                clientRegistrationService.receiveClient(clientsR),
+                relayService.forwardPacket(clientsR)).parTupled.handleErrorWith { t =>
+            logger.error(t)(s"Error caught: ${t.getMessage}").as(ExitCode.Error)
+          }
+        } yield ExitCode.Success
     }
   }
 
