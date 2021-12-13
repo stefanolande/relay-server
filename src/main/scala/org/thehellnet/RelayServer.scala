@@ -11,7 +11,7 @@ import org.typelevel.log4cats.slf4j.Slf4jLogger
 
 import java.net.DatagramSocket
 
-object RelayServer extends IOApp.Simple {
+object RelayServer extends IOApp {
 
   private val logger: StructuredLogger[IO] = Slf4jLogger.getLogger
 

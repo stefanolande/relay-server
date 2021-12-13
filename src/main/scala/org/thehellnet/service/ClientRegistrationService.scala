@@ -30,7 +30,7 @@ class ClientRegistrationService(radioClientChannel: RadioClientChannel) {
         val notExpiredClients = list.filter(_.receivedAt.plus(10, ChronoUnit.SECONDS).isAfter(now))
         (notExpiredClients, list)
       }
-      _ <- logger.info(s"active clients $activeClients")
+      _ <- logger.info(s"active clients ${activeClients.mkString("[", ",", "]")}")
       _ <- IO.sleep(FiniteDuration(1, TimeUnit.SECONDS))
       _ <- expireClients(clientsR)
     } yield ()
