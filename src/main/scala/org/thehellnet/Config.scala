@@ -2,7 +2,7 @@ package org.thehellnet
 
 case class Web(url: String, port: Int)
 
-case class Relay(
+case class RelayServer(
     clientsPort: Int,
     audioPort: Int,
     udpPacketSize: Int,
@@ -12,5 +12,5 @@ case class Relay(
 
 case class ServiceConf(
     web: Web,
-    relay: Relay
+    relayServer: RelayServer
 )

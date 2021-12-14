@@ -19,7 +19,8 @@ import pureconfig.generic.auto._
 
 import java.net.DatagramSocket
 import scala.concurrent.ExecutionContext
-object RelayServer extends IOApp {
+
+object Relay extends IOApp {
 
   private val logger: StructuredLogger[IO] = Slf4jLogger.getLogger
 
@@ -30,25 +31,25 @@ object RelayServer extends IOApp {
         case Left(error)   => IO.raiseError(new RuntimeException(error.prettyPrint()))
         case Right(config) => IO.pure(config)
       })
-      clientsSocketR <- Resource.fromAutoCloseable(IO(new DatagramSocket(config.relay.clientsPort)))
-      radioSocketR   <- Resource.fromAutoCloseable(IO(new DatagramSocket(config.relay.audioPort)))
+      clientsSocketR <- Resource.fromAutoCloseable(IO(new DatagramSocket(config.relayServer.clientsPort)))
+      radioSocketR   <- Resource.fromAutoCloseable(IO(new DatagramSocket(config.relayServer.audioPort)))
     } yield (config, clientsSocketR, radioSocketR)
 
     resources.use {
       case (config, clientsSocket, radioSocket) =>
-        val clientSocketConnection = new SocketConnection(clientsSocket, config.relay.udpPacketSize)
-        val radioSocketConnection  = new SocketConnection(radioSocket, config.relay.udpPacketSize)
+        val clientSocketConnection = new SocketConnection(clientsSocket, config.relayServer.udpPacketSize)
+        val radioSocketConnection  = new SocketConnection(radioSocket, config.relayServer.udpPacketSize)
 
         val audioChannel       = new AudioChannel(radioSocketConnection)
-        val radioClientChannel = new RadioClientChannel(clientSocketConnection, config.relay.udpPacketSize)
+        val radioClientChannel = new RadioClientChannel(clientSocketConnection, config.relayServer.udpPacketSize)
 
         for {
           clientsR <- Ref.of[IO, Map[RadioClient, ClientUpdateTime]](Map.empty)
 
           clientRegistrationService = new ClientRegistrationService(radioClientChannel,
                                                                     clientsR,
-                                                                    config.relay.clientTTL,
-                                                                    config.relay.clientExpirationCheck)
+                                                                    config.relayServer.clientTTL,
+                                                                    config.relayServer.clientExpirationCheck)
           relayService = new RelayService(audioChannel, radioClientChannel, clientsR)
 
           routes = new Routes(clientRegistrationService)
