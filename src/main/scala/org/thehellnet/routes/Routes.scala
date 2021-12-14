@@ -17,8 +17,11 @@ class Routes(clientRegistrationService: ClientRegistrationService) {
       IO(
         fs2.Stream
           .eval(clientRegistrationService.getActiveClients)
-          .map(RadioClientsView.fromModel)
-          .map(x => ServerSentEvent(Some(x.asJson.toString()))))
+          .map { clientMap =>
+            val view = RadioClientsView.fromModel(clientMap)
+            ServerSentEvent(Some(view.asJson.toString()))
+          }
+      )
     })
 
   val routes: HttpRoutes[IO] = sseRoute

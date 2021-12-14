@@ -10,8 +10,10 @@ case class RadioClientView(ip: String, port: Int, lastSeen: LocalDateTime)
 case class RadioClientsView(clients: List[RadioClientView])
 
 object RadioClientsView {
-  def fromModel(clients: Map[RadioClient, ClientUpdateTime]): List[RadioClientView] =
-    clients.map {
+  def fromModel(clients: Map[RadioClient, ClientUpdateTime]): RadioClientsView = {
+    val list = clients.map {
       case (client, time) => RadioClientView(client.ip.toString, client.port.value, time.value)
     }.toList
+    RadioClientsView(list)
+  }
 }
