@@ -14,6 +14,8 @@ import org.thehellnet.routes.Routes
 import org.thehellnet.service.{ClientRegistrationService, RelayService}
 import org.typelevel.log4cats.StructuredLogger
 import org.typelevel.log4cats.slf4j.Slf4jLogger
+import pureconfig.ConfigSource
+import pureconfig.generic.auto._
 
 import java.net.DatagramSocket
 import scala.concurrent.ExecutionContext
@@ -24,35 +26,43 @@ object RelayServer extends IOApp {
   override def run(args: List[String]): IO[ExitCode] = {
 
     val resources = for {
-      clientsSocketR <- Resource.fromAutoCloseable(IO(new DatagramSocket(Config.CLIENTS_PORT)))
-      radioSocketR   <- Resource.fromAutoCloseable(IO(new DatagramSocket(Config.AUDIO_PORT)))
-    } yield (clientsSocketR, radioSocketR)
+      config <- Resource.eval(ConfigSource.default.load[ServiceConf] match {
+        case Left(error)   => IO.raiseError(new RuntimeException(error.prettyPrint()))
+        case Right(config) => IO.pure(config)
+      })
+      clientsSocketR <- Resource.fromAutoCloseable(IO(new DatagramSocket(config.relay.clientsPort)))
+      radioSocketR   <- Resource.fromAutoCloseable(IO(new DatagramSocket(config.relay.audioPort)))
+    } yield (config, clientsSocketR, radioSocketR)
 
     resources.use {
-      case (clientsSocket, radioSocket) =>
-        val clientSocketConnection = new SocketConnection(clientsSocket)
-        val radioSocketConnection  = new SocketConnection(radioSocket)
+      case (config, clientsSocket, radioSocket) =>
+        val clientSocketConnection = new SocketConnection(clientsSocket, config.relay.udpPacketSize)
+        val radioSocketConnection  = new SocketConnection(radioSocket, config.relay.udpPacketSize)
 
         val audioChannel       = new AudioChannel(radioSocketConnection)
-        val radioClientChannel = new RadioClientChannel(clientSocketConnection)
+        val radioClientChannel = new RadioClientChannel(clientSocketConnection, config.relay.udpPacketSize)
 
         for {
           clientsR <- Ref.of[IO, Map[RadioClient, ClientUpdateTime]](Map.empty)
 
-          clientRegistrationService = new ClientRegistrationService(radioClientChannel, clientsR)
-          relayService              = new RelayService(audioChannel, radioClientChannel, clientsR)
+          clientRegistrationService = new ClientRegistrationService(radioClientChannel,
+                                                                    clientsR,
+                                                                    config.relay.clientTTL,
+                                                                    config.relay.clientExpirationCheck)
+          relayService = new RelayService(audioChannel, radioClientChannel, clientsR)
 
           routes = new Routes(clientRegistrationService)
 
-          _ <- (clientRegistrationService.clientsRegistrationLogic, relayService.forwardPackets, webServer(routes)).parTupled.handleErrorWith {
-            t =>
-              logger.error(t)(s"Error caught: ${t.getMessage}").as(ExitCode.Error)
+          _ <- (clientRegistrationService.clientsRegistrationLogic,
+                relayService.forwardPackets,
+                webServer(routes, config.web.url, config.web.port)).parTupled.handleErrorWith { t =>
+            logger.error(t)(s"Error caught: ${t.getMessage}").as(ExitCode.Error)
           }
         } yield ExitCode.Success
     }
   }
 
-  private def webServer(routes: Routes): IO[Nothing] = {
+  private def webServer(routes: Routes, host: String, port: Int): IO[Nothing] = {
 
     implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
 
@@ -61,7 +71,7 @@ object RelayServer extends IOApp {
 
     BlazeServerBuilder[IO]
       .withExecutionContext(ec)
-      .bindHttp(8080, "localhost")
+      .bindHttp(port, host)
       .withHttpApp(httpApp)
       .resource
       .useForever

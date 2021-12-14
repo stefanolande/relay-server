@@ -2,7 +2,6 @@ package org.thehellnet.service
 
 import cats.effect.{Clock, IO, Ref}
 import cats.implicits._
-import org.thehellnet.Config
 import org.thehellnet.model.RadioClient
 import org.thehellnet.model.valueclass.ClientUpdateTime
 import org.thehellnet.network.RadioClientChannel
@@ -15,7 +14,9 @@ import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.FiniteDuration
 
 class ClientRegistrationService(radioClientChannel: RadioClientChannel,
-                                clientsR: Ref[IO, Map[RadioClient, ClientUpdateTime]]) {
+                                clientsR: Ref[IO, Map[RadioClient, ClientUpdateTime]],
+                                clientTTL: Int,
+                                clientExpirationCheck: Int) {
 
   private val logger: StructuredLogger[IO] = Slf4jLogger.getLogger
 
@@ -40,14 +41,14 @@ class ClientRegistrationService(radioClientChannel: RadioClientChannel,
         (notExpiredClients, clientsMap)
       }
       _ <- logger.info(s"active clients ${activeClients.keySet.mkString("[", ",", "]")}")
-      _ <- IO.sleep(FiniteDuration(Config.CLIENT_EXPIRATION_CHECK, TimeUnit.SECONDS))
+      _ <- IO.sleep(FiniteDuration(clientExpirationCheck.toLong, TimeUnit.SECONDS))
       _ <- expireClients
     } yield ()
 
   private def isAlive(client: (RadioClient, ClientUpdateTime), nowInstant: Instant): Boolean = client match {
     case (_, receivedAt) =>
       val now = LocalDateTime.ofInstant(nowInstant, ZoneOffset.UTC)
-      receivedAt.value.plus(Config.CLIENT_TTL, ChronoUnit.SECONDS).isAfter(now)
+      receivedAt.value.plus(clientTTL.toLong, ChronoUnit.SECONDS).isAfter(now)
   }
 
   private def addOrUpdateClients(newClient: RadioClient,
