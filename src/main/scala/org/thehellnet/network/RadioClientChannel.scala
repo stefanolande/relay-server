@@ -1,7 +1,6 @@
 package org.thehellnet.network
 
 import cats.effect.IO
-import org.thehellnet.Config.PACKET_SIZE
 import org.thehellnet.model.valueclass.Port
 import org.thehellnet.model.{AudioData, RadioClient}
 import org.thehellnet.network.socket.SocketConnection
@@ -10,7 +9,7 @@ import org.typelevel.log4cats.slf4j.Slf4jLogger
 
 import java.net.DatagramPacket
 
-class RadioClientChannel(socketConnection: SocketConnection) {
+class RadioClientChannel(socketConnection: SocketConnection, packetSize: Int) {
 
   private val logger: StructuredLogger[IO] = Slf4jLogger.getLogger
 
@@ -21,7 +20,7 @@ class RadioClientChannel(socketConnection: SocketConnection) {
     } yield client
 
   def forward(audioData: AudioData, radioClient: RadioClient): IO[Unit] = {
-    val clientPacket = new DatagramPacket(audioData.payload, PACKET_SIZE, radioClient.ip, radioClient.port.value)
+    val clientPacket = new DatagramPacket(audioData.payload, packetSize, radioClient.ip, radioClient.port.value)
     socketConnection.send(clientPacket) >>
     logger.info(s"Forwarded audio packet to $radioClient")
   }

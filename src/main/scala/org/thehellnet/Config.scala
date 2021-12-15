@@ -1,11 +1,16 @@
 package org.thehellnet
 
-object Config {
+case class Web(url: String, port: Int)
 
-  val CLIENTS_PORT = 64123
-  val AUDIO_PORT   = 1235
-  val PACKET_SIZE  = 8192
+case class RelayServer(
+    clientsPort: Int,
+    audioPort: Int,
+    udpPacketSize: Int,
+    clientTTL: Int,
+    clientExpirationCheck: Int
+)
 
-  val CLIENT_TTL              = 10L // seconds
-  val CLIENT_EXPIRATION_CHECK = 1 // every x seconds
-}
+case class ServiceConf(
+    web: Web,
+    relayServer: RelayServer
+)

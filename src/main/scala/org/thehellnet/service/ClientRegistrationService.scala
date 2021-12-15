@@ -1,7 +1,7 @@
 package org.thehellnet.service
 
 import cats.effect.{Clock, IO, Ref}
-import org.thehellnet.Config
+import cats.implicits._
 import org.thehellnet.model.RadioClient
 import org.thehellnet.model.valueclass.ClientUpdateTime
 import org.thehellnet.network.RadioClientChannel
@@ -13,20 +13,27 @@ import java.time.{Instant, LocalDateTime, ZoneOffset}
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.FiniteDuration
 
-class ClientRegistrationService(radioClientChannel: RadioClientChannel) {
+class ClientRegistrationService(radioClientChannel: RadioClientChannel,
+                                clientsR: Ref[IO, Map[RadioClient, ClientUpdateTime]],
+                                clientTTL: Int,
+                                clientExpirationCheck: Int) {
 
   private val logger: StructuredLogger[IO] = Slf4jLogger.getLogger
 
-  def receiveClient(clientsR: Ref[IO, Map[RadioClient, ClientUpdateTime]]): IO[Unit] =
+  def getActiveClients: IO[Map[RadioClient, ClientUpdateTime]] = clientsR.get
+
+  def clientsRegistrationLogic: IO[(Unit, Unit)] = (this.expireClients, this.receiveClient).parTupled
+
+  private def receiveClient: IO[Unit] =
     for {
       client     <- radioClientChannel.receive()
       _          <- logger.info(s"received client $client")
       nowInstant <- Clock[IO].realTimeInstant
       _          <- clientsR.getAndUpdate(addOrUpdateClients(client, _, nowInstant))
-      _          <- receiveClient(clientsR)
+      _          <- receiveClient
     } yield ()
 
-  def expireClients(clientsR: Ref[IO, Map[RadioClient, ClientUpdateTime]]): IO[Unit] =
+  private def expireClients: IO[Unit] =
     for {
       nowInstant <- Clock[IO].realTimeInstant
       activeClients <- clientsR.modify { clientsMap =>
@@ -34,14 +41,14 @@ class ClientRegistrationService(radioClientChannel: RadioClientChannel) {
         (notExpiredClients, clientsMap)
       }
       _ <- logger.info(s"active clients ${activeClients.keySet.mkString("[", ",", "]")}")
-      _ <- IO.sleep(FiniteDuration(Config.CLIENT_EXPIRATION_CHECK, TimeUnit.SECONDS))
-      _ <- expireClients(clientsR)
+      _ <- IO.sleep(FiniteDuration(clientExpirationCheck.toLong, TimeUnit.SECONDS))
+      _ <- expireClients
     } yield ()
 
   private def isAlive(client: (RadioClient, ClientUpdateTime), nowInstant: Instant): Boolean = client match {
     case (_, receivedAt) =>
       val now = LocalDateTime.ofInstant(nowInstant, ZoneOffset.UTC)
-      receivedAt.value.plus(Config.CLIENT_TTL, ChronoUnit.SECONDS).isAfter(now)
+      receivedAt.value.plus(clientTTL.toLong, ChronoUnit.SECONDS).isAfter(now)
   }
 
   private def addOrUpdateClients(newClient: RadioClient,
