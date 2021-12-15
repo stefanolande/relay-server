@@ -29,25 +29,29 @@ class ClientRegistrationService(radioClientChannel: RadioClientChannel,
     ).parTupled.background.useForever
 
   private def receiveClient: IO[Unit] =
-    for {
-      client     <- radioClientChannel.receive()
-      _          <- logger.info(s"received client $client")
-      nowInstant <- Clock[IO].realTimeInstant
-      _          <- clientsR.getAndUpdate(addOrUpdateClients(client, _, nowInstant))
-      _          <- IO.defer(receiveClient)
-    } yield ()
+    IO.defer {
+      for {
+        client     <- radioClientChannel.receive()
+        _          <- logger.info(s"received client $client")
+        nowInstant <- Clock[IO].realTimeInstant
+        _          <- clientsR.getAndUpdate(addOrUpdateClients(client, _, nowInstant))
+        _          <- receiveClient
+      } yield ()
+    }
 
   private def expireClients: IO[Unit] =
-    for {
-      nowInstant <- Clock[IO].realTimeInstant
-      activeClients <- clientsR.modify { clientsMap =>
-        val notExpiredClients = clientsMap.filter(isAlive(_, nowInstant))
-        (notExpiredClients, clientsMap)
-      }
-      _ <- logger.info(s"active clients ${activeClients.keySet.mkString("[", ",", "]")}")
-      _ <- IO.sleep(FiniteDuration(clientExpirationCheck.toLong, TimeUnit.SECONDS))
-      _ <- IO.defer(expireClients)
-    } yield ()
+    IO.defer {
+      for {
+        nowInstant <- Clock[IO].realTimeInstant
+        activeClients <- clientsR.modify { clientsMap =>
+          val notExpiredClients = clientsMap.filter(isAlive(_, nowInstant))
+          (notExpiredClients, clientsMap)
+        }
+        _ <- logger.info(s"active clients ${activeClients.keySet.mkString("[", ",", "]")}")
+        _ <- IO.sleep(FiniteDuration(clientExpirationCheck.toLong, TimeUnit.SECONDS))
+        _ <- expireClients
+      } yield ()
+    }
 
   private def isAlive(client: (RadioClient, ClientUpdateTime), nowInstant: Instant): Boolean =
     client match {
