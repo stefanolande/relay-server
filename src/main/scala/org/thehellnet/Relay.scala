@@ -2,14 +2,13 @@ package org.thehellnet
 
 import cats.effect._
 import cats.syntax.all._
-import org.http4s.HttpApp
 import org.http4s.blaze.server.BlazeServerBuilder
 import org.http4s.server.Router
 import org.http4s.server.staticcontent._
 import org.thehellnet.model.RadioClient
 import org.thehellnet.model.valueclass.ClientUpdateTime
-import org.thehellnet.network.socket.SocketConnection
 import org.thehellnet.network.{AudioChannel, RadioClientChannel}
+import org.thehellnet.network.socket.SocketConnection
 import org.thehellnet.routes.Routes
 import org.thehellnet.service.{ClientRegistrationService, RelayService}
 import org.typelevel.log4cats.StructuredLogger
@@ -18,13 +17,12 @@ import pureconfig.ConfigSource
 import pureconfig.generic.auto._
 
 import java.net.DatagramSocket
-import scala.concurrent.ExecutionContext
 
-object Relay extends IOApp {
+object Relay extends IOApp.Simple {
 
   private val logger: StructuredLogger[IO] = Slf4jLogger.getLogger
 
-  override def run(args: List[String]): IO[ExitCode] = {
+  override def run: IO[Unit] = {
 
     val resources = for {
       config <- Resource.eval(ConfigSource.default.load[ServiceConf] match {
@@ -54,27 +52,26 @@ object Relay extends IOApp {
 
           routes = new Routes(clientRegistrationService)
 
-          _ <- (clientRegistrationService.clientsRegistrationLogic,
-                relayService.forwardPackets,
-                webServer(routes, config.web.url, config.web.port)).parTupled.handleErrorWith { t =>
-            logger.error(t)(s"Error caught: ${t.getMessage}").as(ExitCode.Error)
+          _ <- (
+            clientRegistrationService.clientsRegistrationLogic,
+            relayService.forwardPackets,
+            webServer(routes, config.web.url, config.web.port)
+          ).parTupled.handleErrorWith { t =>
+            logger.error(t)(s"Error caught: ${t.getMessage}")
           }
-        } yield ExitCode.Success
+        } yield ()
     }
   }
 
-  private def webServer(routes: Routes, host: String, port: Int): IO[Nothing] = {
-
-    implicit val ec: ExecutionContext = scala.concurrent.ExecutionContext.Implicits.global
-
-    val httpApp: HttpApp[IO] =
-      Router("api" -> routes.routes, "/" -> fileService[IO](FileService.Config("static/"))).orNotFound
-
+  private def webServer(routes: Routes, host: String, port: Int): IO[Nothing] =
     BlazeServerBuilder[IO]
-      .withExecutionContext(ec)
       .bindHttp(port, host)
-      .withHttpApp(httpApp)
+      .withHttpApp(
+        Router(
+          "api" -> routes.routes,
+          "/"   -> fileService[IO](FileService.Config("static/"))
+        ).orNotFound
+      )
       .resource
       .useForever
-  }
 }
