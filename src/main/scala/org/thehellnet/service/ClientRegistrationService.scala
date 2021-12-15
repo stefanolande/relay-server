@@ -8,8 +8,8 @@ import org.thehellnet.network.RadioClientChannel
 import org.typelevel.log4cats.StructuredLogger
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 
-import java.time.temporal.ChronoUnit
 import java.time.{Instant, LocalDateTime, ZoneOffset}
+import java.time.temporal.ChronoUnit
 import java.util.concurrent.TimeUnit
 import scala.concurrent.duration.FiniteDuration
 
@@ -22,7 +22,11 @@ class ClientRegistrationService(radioClientChannel: RadioClientChannel,
 
   def getActiveClients: IO[Map[RadioClient, ClientUpdateTime]] = clientsR.get
 
-  def clientsRegistrationLogic: IO[(Unit, Unit)] = (this.expireClients, this.receiveClient).parTupled
+  def clientsRegistrationLogic: IO[Nothing] =
+    (
+      this.expireClients,
+      this.receiveClient
+    ).parTupled.background.useForever
 
   private def receiveClient: IO[Unit] =
     for {
@@ -30,7 +34,7 @@ class ClientRegistrationService(radioClientChannel: RadioClientChannel,
       _          <- logger.info(s"received client $client")
       nowInstant <- Clock[IO].realTimeInstant
       _          <- clientsR.getAndUpdate(addOrUpdateClients(client, _, nowInstant))
-      _          <- receiveClient
+      _          <- IO.defer(receiveClient)
     } yield ()
 
   private def expireClients: IO[Unit] =
@@ -42,14 +46,15 @@ class ClientRegistrationService(radioClientChannel: RadioClientChannel,
       }
       _ <- logger.info(s"active clients ${activeClients.keySet.mkString("[", ",", "]")}")
       _ <- IO.sleep(FiniteDuration(clientExpirationCheck.toLong, TimeUnit.SECONDS))
-      _ <- expireClients
+      _ <- IO.defer(expireClients)
     } yield ()
 
-  private def isAlive(client: (RadioClient, ClientUpdateTime), nowInstant: Instant): Boolean = client match {
-    case (_, receivedAt) =>
-      val now = LocalDateTime.ofInstant(nowInstant, ZoneOffset.UTC)
-      receivedAt.value.plus(clientTTL.toLong, ChronoUnit.SECONDS).isAfter(now)
-  }
+  private def isAlive(client: (RadioClient, ClientUpdateTime), nowInstant: Instant): Boolean =
+    client match {
+      case (_, receivedAt) =>
+        val now = LocalDateTime.ofInstant(nowInstant, ZoneOffset.UTC)
+        receivedAt.value.plus(clientTTL.toLong, ChronoUnit.SECONDS).isAfter(now)
+    }
 
   private def addOrUpdateClients(newClient: RadioClient,
                                  clientsMap: Map[RadioClient, ClientUpdateTime],

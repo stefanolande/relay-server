@@ -19,9 +19,10 @@ class RadioClientChannel(socketConnection: SocketConnection, packetSize: Int) {
       client = RadioClient(packet.getAddress, Port(packet.getPort))
     } yield client
 
-  def forward(audioData: AudioData, radioClient: RadioClient): IO[Unit] = {
-    val clientPacket = new DatagramPacket(audioData.payload, packetSize, radioClient.ip, radioClient.port.value)
-    socketConnection.send(clientPacket) >>
-    logger.info(s"Forwarded audio packet to $radioClient")
-  }
+  def forward(audioData: AudioData, radioClient: RadioClient): IO[Unit] =
+    for {
+      clientPacket <- IO(new DatagramPacket(audioData.payload, packetSize, radioClient.ip, radioClient.port.value))
+      _            <- socketConnection.send(clientPacket)
+      _            <- logger.info(s"Forwarded audio packet to $radioClient")
+    } yield ()
 }
