@@ -1,0 +1,22 @@
+stages:
+  - build_test
+  - dockerize
+
+build_test:
+  stage: build_test
+  interruptible: true
+  image: hseeberger/scala-sbt:11.0.13_1.5.7_2.13.7
+  script:
+    - sbt assembly
+  artifacts:
+    name: 'angular-app'
+    paths:
+      - target/scala-2.13/radioware-relay-server.jar
+
+dockerize:
+  stage: dockerize
+  interruptible: true
+  dependencies:
+    - build_test
+  script:
+    - docker build --tag radioware-relay-server:$CI_COMMIT_SHORT_SHA .
