@@ -9,7 +9,7 @@ build_test:
   script:
     - sbt assembly
   artifacts:
-    name: 'angular-app'
+    name: "radioware-relay-server-$CI_COMMIT_SHORT_SHA.jar"
     paths:
       - target/scala-2.13/radioware-relay-server.jar
 
