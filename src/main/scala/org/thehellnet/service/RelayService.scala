@@ -18,7 +18,7 @@ class RelayService(audioChannel: AudioChannel,
     IO.defer {
       for {
         audioData <- audioChannel.receive()
-        _         <- logger.info(s"received audio packet")
+        _         <- logger.debug(s"received audio packet")
         clients   <- clientsR.get
         _         <- clients.keys.toList.map(radioClientChannel.forward(audioData, _)).sequence
         _         <- forwardPackets

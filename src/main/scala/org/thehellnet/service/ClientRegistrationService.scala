@@ -32,7 +32,7 @@ class ClientRegistrationService(radioClientChannel: RadioClientChannel,
     IO.defer {
       for {
         client     <- radioClientChannel.receive()
-        _          <- logger.info(s"received client $client")
+        _          <- logger.debug(s"received client $client")
         nowInstant <- Clock[IO].realTimeInstant
         _          <- clientsR.getAndUpdate(addOrUpdateClients(client, _, nowInstant))
         _          <- receiveClient
@@ -47,7 +47,7 @@ class ClientRegistrationService(radioClientChannel: RadioClientChannel,
           val notExpiredClients = clientsMap.filter(isAlive(_, nowInstant))
           (notExpiredClients, clientsMap)
         }
-        _ <- logger.info(s"active clients ${activeClients.keySet.mkString("[", ",", "]")}")
+        _ <- logger.debug(s"active clients ${activeClients.keySet.mkString("[", ",", "]")}")
         _ <- IO.sleep(FiniteDuration(clientExpirationCheck.toLong, TimeUnit.SECONDS))
         _ <- expireClients
       } yield ()
