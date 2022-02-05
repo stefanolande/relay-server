@@ -9,7 +9,7 @@ import org.typelevel.log4cats.slf4j.Slf4jLogger
 
 import java.net.DatagramPacket
 
-class RadioClientChannel(socketConnection: SocketConnection, packetSize: Int) {
+class RadioClientChannel(socketConnection: SocketConnection) {
 
   private val logger: StructuredLogger[IO] = Slf4jLogger.getLogger
 
@@ -21,8 +21,9 @@ class RadioClientChannel(socketConnection: SocketConnection, packetSize: Int) {
 
   def forward(audioData: AudioData, radioClient: RadioClient): IO[Unit] =
     for {
-      clientPacket <- IO(new DatagramPacket(audioData.payload, packetSize, radioClient.ip, radioClient.port.value))
-      _            <- socketConnection.send(clientPacket)
-      _            <- logger.info(s"Forwarded audio packet to $radioClient")
+      clientPacket <- IO(
+        new DatagramPacket(audioData.payload, audioData.length, radioClient.ip, radioClient.port.value))
+      _ <- socketConnection.send(clientPacket)
+      _ <- logger.debug(s"Forwarded audio packet to $radioClient")
     } yield ()
 }

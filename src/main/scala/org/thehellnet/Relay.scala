@@ -39,7 +39,7 @@ object Relay extends IOApp.Simple {
         val radioSocketConnection  = new SocketConnection(radioSocket, config.relayServer.udpPacketSize)
 
         val audioChannel       = new AudioChannel(radioSocketConnection)
-        val radioClientChannel = new RadioClientChannel(clientSocketConnection, config.relayServer.udpPacketSize)
+        val radioClientChannel = new RadioClientChannel(clientSocketConnection)
 
         for {
           clientsR <- Ref.of[IO, Map[RadioClient, ClientUpdateTime]](Map.empty)

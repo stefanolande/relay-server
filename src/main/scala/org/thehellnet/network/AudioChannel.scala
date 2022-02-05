@@ -9,6 +9,6 @@ class AudioChannel(socketConnection: SocketConnection) {
   def receive(): IO[AudioData] =
     for {
       packet <- socketConnection.receive()
-      data = AudioData(packet.getData)
+      data = AudioData(packet.getData, packet.getLength)
     } yield data
 }
