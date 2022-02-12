@@ -1,6 +1,7 @@
 stages:
   - build_test
   - dockerize
+  - deploy
 
 build_test:
   stage: build_test
@@ -19,4 +20,11 @@ dockerize:
   dependencies:
     - build_test
   script:
-    - docker build --tag radioware-relay-server:$CI_COMMIT_SHORT_SHA .
+    - docker image build --tag radioware-relay:$CI_COMMIT_SHORT_SHA .
+    - docker image tag radioware-relay:$CI_COMMIT_SHORT_SHA radioware-relay:latest
+
+deploy:
+  stage: deploy
+  interruptible: true
+  script:
+    - curl http://127.0.0.1:7000/api/private/v1/deploy/radioware-relay
