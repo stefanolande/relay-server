@@ -22,8 +22,10 @@ class RadioClientChannel(socketConnection: SocketConnection) {
   def forward(audioData: AudioData, radioClient: RadioClient): IO[Unit] =
     for {
       clientPacket <- IO(
-        new DatagramPacket(audioData.payload, audioData.length, radioClient.ip, radioClient.port.value))
+        new DatagramPacket(audioData.payload, audioData.payload.length, radioClient.ip, radioClient.port.value))
       _ <- socketConnection.send(clientPacket)
+      coso = "ciao".getBytes
+      _ <- socketConnection.send(new DatagramPacket(coso, coso.length))
       _ <- logger.debug(s"Forwarded audio packet to $radioClient")
     } yield ()
 }
