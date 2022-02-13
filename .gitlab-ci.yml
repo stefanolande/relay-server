@@ -26,5 +26,6 @@ dockerize:
 deploy:
   stage: deploy
   interruptible: true
+  image: alpine/curl:3.14
   script:
     - curl http://127.0.0.1:7000/api/private/v1/deploy/radioware-relay
