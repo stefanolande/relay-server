@@ -13,5 +13,5 @@ class SocketConnection(socket: DatagramSocket, packetSize: Int) {
   }
 
   def send(datagramPacket: DatagramPacket): IO[Unit] =
-    IO.blocking(socket.send(datagramPacket))
+      IO.blocking(socket.send(datagramPacket))
 }
