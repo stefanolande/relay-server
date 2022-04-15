@@ -39,7 +39,8 @@ libraryDependencies ++= Seq(
   "io.circe" %% "circe-core" % VERSIONS("circe"),
   "io.circe" %% "circe-generic" % VERSIONS("circe"),
   "io.circe" %% "circe-parser" % VERSIONS("circe"),
-  "com.github.pureconfig" %% "pureconfig" % VERSIONS("pureconfig")
+  "com.github.pureconfig" %% "pureconfig" % VERSIONS("pureconfig"),
+  "org.scalatest" %% "scalatest" % "3.2.11" % "test"
 )
 
 scalacOptions ++= Seq(

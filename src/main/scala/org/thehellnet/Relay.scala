@@ -10,7 +10,7 @@ import org.thehellnet.model.valueclass.ClientUpdateTime
 import org.thehellnet.network.{AudioChannel, RadioClientChannel}
 import org.thehellnet.network.socket.SocketConnection
 import org.thehellnet.routes.Routes
-import org.thehellnet.service.{ClientRegistrationService, RelayService}
+import org.thehellnet.service.{ClientRegistrationService, CryptoService, RelayService}
 import org.typelevel.log4cats.StructuredLogger
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 import pureconfig.ConfigSource
@@ -38,8 +38,11 @@ object Relay extends IOApp.Simple {
         val clientSocketConnection = new SocketConnection(clientsSocket, config.relayServer.udpPacketSize)
         val radioSocketConnection  = new SocketConnection(radioSocket, config.relayServer.udpPacketSize)
 
+        val cryptoService =
+          new CryptoService(encryptionKey = config.relayServer.security.encryptionKey, salt = config.relayServer.security.encryptionSalt)
+
         val audioChannel       = new AudioChannel(radioSocketConnection)
-        val radioClientChannel = new RadioClientChannel(clientSocketConnection)
+        val radioClientChannel = new RadioClientChannel(clientSocketConnection, cryptoService)
 
         for {
           clientsR <- Ref.of[IO, Map[RadioClient, ClientUpdateTime]](Map.empty)
@@ -47,7 +50,8 @@ object Relay extends IOApp.Simple {
           clientRegistrationService = new ClientRegistrationService(radioClientChannel,
                                                                     clientsR,
                                                                     config.relayServer.clientTTL,
-                                                                    config.relayServer.clientExpirationCheck)
+                                                                    config.relayServer.clientExpirationCheck,
+                                                                    config.relayServer.security.pingSecret)
           relayService = new RelayService(audioChannel, radioClientChannel, clientsR)
 
           routes = new Routes(clientRegistrationService)
