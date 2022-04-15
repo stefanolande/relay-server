@@ -7,10 +7,17 @@ case class RelayServer(
     audioPort: Int,
     udpPacketSize: Int,
     clientTTL: Int,
-    clientExpirationCheck: Int
+    clientExpirationCheck: Int,
+    security: Security
 )
 
 case class ServiceConf(
     web: Web,
     relayServer: RelayServer
+)
+
+case class Security(
+    encryptionKey: String,
+    encryptionSalt: String,
+    pingSecret: String
 )
