@@ -14,6 +14,8 @@ import org.thehellnet.service.{ClientRegistrationService, CryptoService, RelaySe
 import org.typelevel.log4cats.StructuredLogger
 import org.typelevel.log4cats.slf4j.Slf4jLogger
 import pureconfig.ConfigSource
+import io.circe.generic.auto._
+import io.circe.syntax._
 import pureconfig.generic.auto._
 
 import java.net.DatagramSocket
@@ -45,6 +47,7 @@ object Relay extends IOApp.Simple {
         val radioClientChannel = new RadioClientChannel(clientSocketConnection, cryptoService)
 
         for {
+          _        <- logger.info(s"Starting relay with configuration:\n ${config.asJson}")
           clientsR <- Ref.of[IO, Map[RadioClient, ClientUpdateTime]](Map.empty)
 
           clientRegistrationService = new ClientRegistrationService(radioClientChannel,
