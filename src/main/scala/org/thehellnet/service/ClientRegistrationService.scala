@@ -1,6 +1,5 @@
 package org.thehellnet.service
 
-import cats.data.OptionT
 import cats.effect.{Clock, IO, Ref}
 import cats.implicits._
 import org.thehellnet.model.RadioClient
@@ -34,14 +33,18 @@ class ClientRegistrationService(radioClientChannel: RadioClientChannel,
 
   private def receiveClient: IO[Unit] =
     IO.defer {
-      val receiveClientT = for {
-        client     <- OptionT(radioClientChannel.receive())
-        _          <- OptionT.liftF(logger.debug(s"received client $client"))
-        nowInstant <- OptionT.liftF(Clock[IO].realTimeInstant)
-        _          <- OptionT.liftF(clientsR.getAndUpdate(handleNewClient(client, _, nowInstant)))
-      } yield ()
+      for {
+        maybeClient <- radioClientChannel.receive()
+        _ <- if (maybeClient.isDefined) {
+          for {
+            _          <- logger.debug(s"received client ${maybeClient.get}")
+            nowInstant <- Clock[IO].realTimeInstant
+            _          <- clientsR.getAndUpdate(handleNewClient(maybeClient.get, _, nowInstant))
 
-      receiveClientT.value >> receiveClient
+          } yield ()
+        } else IO.unit
+        _ <- receiveClient
+      } yield ()
     }
 
   private def expireClients: IO[Unit] =
@@ -65,16 +68,21 @@ class ClientRegistrationService(radioClientChannel: RadioClientChannel,
         receivedAt.value.plus(clientTTL.toLong, ChronoUnit.SECONDS).isAfter(now)
     }
 
+  private def validatePing(newClient: RadioClient, nowInstant: Instant): Boolean = {
+    val timeDifference = ChronoUnit.SECONDS.between(nowInstant, newClient.timestamp)
+
+    newClient.secret == pingSecret && timeDifference < PingExpirationMinutes
+  }
+
   private def handleNewClient(newClient: RadioClient,
                               clientsMap: Map[RadioClient, ClientUpdateTime],
                               nowInstant: Instant): Map[RadioClient, ClientUpdateTime] = {
-    val currentInstant   = LocalDateTime.ofInstant(nowInstant, ZoneOffset.UTC)
-    val clientUpdateTime = ClientUpdateTime(currentInstant)
+    val now = LocalDateTime.ofInstant(nowInstant, ZoneOffset.UTC)
 
-    val timeDifference = ChronoUnit.SECONDS.between(currentInstant, newClient.timestamp)
+    val clientUpdateTime = ClientUpdateTime(now)
 
-    if (newClient.secret == pingSecret && timeDifference < PingExpirationMinutes)
-      clientsMap.filterNot { case (client, _) => client == newClient } + (newClient -> clientUpdateTime)
+    if (validatePing(newClient, nowInstant))
+      clientsMap.filterNot { case (client, _) => client.isTheSameAs(newClient) } + (newClient -> clientUpdateTime)
     else
       clientsMap
   }

@@ -11,6 +11,7 @@ import org.typelevel.log4cats.slf4j.Slf4jLogger
 
 import java.net.DatagramPacket
 import java.time.Instant
+import java.util
 import java.util.UUID
 import scala.util.Try
 
@@ -21,6 +22,7 @@ class RadioClientChannel(socketConnection: SocketConnection, crypto: CryptoServi
   def receive(): IO[Option[RadioClient]] = {
     val client = for {
       packet  <- OptionT.liftF(socketConnection.receive())
+      _       <- OptionT.liftF(logger.debug(s"received ping packet"))
       clientT <- OptionT.fromOption[IO](parseMessage(packet))
     } yield clientT
     client.value
@@ -33,9 +35,12 @@ class RadioClientChannel(socketConnection: SocketConnection, crypto: CryptoServi
       _            <- logger.debug(s"Forwarded audio packet of ${audioData.payload.length} bytes to $radioClient")
     } yield ()
 
-  private def parseMessage(packet: DatagramPacket): Option[RadioClient] =
+  private def parseMessage(packet: DatagramPacket): Option[RadioClient] = {
+
+    val bytes = util.Arrays.copyOfRange(packet.getData, 0, packet.getLength)
+
     crypto
-      .decrypt(packet.getData)
+      .decrypt(bytes)
       .flatMap { message =>
         Try {
           val messageParts = message.split("\\|")
@@ -43,11 +48,13 @@ class RadioClientChannel(socketConnection: SocketConnection, crypto: CryptoServi
           RadioClient(
             secret     = messageParts(0),
             identifier = UUID.fromString(messageParts(1)),
-            timestamp  = Instant.parse(messageParts(1)),
+            timestamp  = Instant.ofEpochSecond(messageParts(2).toLong),
             ip         = packet.getAddress,
             port       = Port(packet.getPort)
           )
+
         }
       }
       .toOption
+  }
 }

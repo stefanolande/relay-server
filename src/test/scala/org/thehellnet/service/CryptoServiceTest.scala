@@ -2,7 +2,6 @@ package org.thehellnet.service
 
 import org.scalatest.matchers.should.Matchers
 import org.scalatest.wordspec.AnyWordSpec
-import org.thehellnet.service.CryptoService
 
 import scala.util.{Failure, Success}
 
