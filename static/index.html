@@ -1,0 +1,17 @@
+<html lang="fr">
+<head>
+    <title>Active radio clients</title>
+    <script>
+            const evtSource = new EventSource("/api/clients");
+            evtSource.onmessage = function(event) {
+                document.getElementById("clients").textContent = event.data;
+            }
+        </script>
+</head>
+<body>
+<h1>Active radio clients</h1>
+<span id="clients">
+
+</span>
+</body>
+</html>
