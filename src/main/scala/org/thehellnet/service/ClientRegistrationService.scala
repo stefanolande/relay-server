@@ -21,7 +21,7 @@ class ClientRegistrationService(radioClientChannel: RadioClientChannel,
 
   private val logger: StructuredLogger[IO] = Slf4jLogger.getLogger
 
-  private val PingExpirationMinutes = 1
+  private val PingExpirationSeconds = 15
 
   def getActiveClients: IO[Map[RadioClient, ClientUpdateTime]] = clientsR.get
 
@@ -71,7 +71,7 @@ class ClientRegistrationService(radioClientChannel: RadioClientChannel,
   private def validatePing(newClient: RadioClient, nowInstant: Instant): Boolean = {
     val timeDifference = ChronoUnit.SECONDS.between(nowInstant, newClient.timestamp)
 
-    newClient.secret == pingSecret && timeDifference < PingExpirationMinutes
+    newClient.secret == pingSecret && timeDifference < PingExpirationSeconds
   }
 
   private def handleNewClient(newClient: RadioClient,
