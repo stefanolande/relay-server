@@ -15,9 +15,10 @@ val log4catsVersion   = "2.3.0"
 val fs2Version        = "3.2.7"
 val catsEffectVersion = "3.3.12"
 val tapirVersion      = "0.20.2"
-val http4Version      = "0.23.7"
+val http4sVersion     = "0.23.12"
 val circeVersion      = "0.14.2"
 val pureconfigVersion = "0.17.1"
+val scalaTestVersion  = "3.2.12"
 
 libraryDependencies ++= Seq(
   "org.slf4j" % "slf4j-api" % slf4jVersion,
@@ -38,7 +39,9 @@ libraryDependencies ++= Seq(
   "io.circe" %% "circe-generic" % circeVersion,
   "io.circe" %% "circe-parser" % circeVersion,
   "com.github.pureconfig" %% "pureconfig" % pureconfigVersion,
-  "org.scalatest" %% "scalatest" % "3.2.12" % "test"
+  "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
+  "org.http4s" %% "http4s-dsl" % http4sVersion,
+  "org.http4s" %% "http4s-blaze-server" % http4sVersion,
 )
 
 scalacOptions ++= Seq(
