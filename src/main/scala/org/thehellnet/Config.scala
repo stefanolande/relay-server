@@ -1,4 +1,6 @@
 package org.thehellnet
+import pureconfig.*
+import pureconfig.generic.derivation.default.*
 
 case class Web(url: String, port: Int)
 
@@ -11,13 +13,13 @@ case class RelayServer(
     security: Security
 )
 
-case class ServiceConf(
-    web: Web,
-    relayServer: RelayServer
-)
-
 case class Security(
     encryptionKey: String,
     encryptionSalt: String,
     pingSecret: String
 )
+
+case class ServiceConf(
+    web: Web,
+    relayServer: RelayServer
+) derives ConfigReader

@@ -1,6 +1,6 @@
-ThisBuild / version := "0.6.0"
+ThisBuild / version := "0.7.0"
 
-ThisBuild / scalaVersion := "2.13.7"
+ThisBuild / scalaVersion := "3.2.1"
 
 lazy val root = (project in file("."))
   .settings(
@@ -8,17 +8,18 @@ lazy val root = (project in file("."))
     assembly / assemblyJarName := "radioware-relay-server.jar",
   )
 
-val slf4jVersion      = "1.7.36"
-val logbackVersion    = "1.2.11"
+val slf4jVersion      = "2.0.3"
+val logbackVersion    = "1.4.4"
 val logstashVersion   = "7.2"
 val log4catsVersion   = "2.3.0"
-val fs2Version        = "3.2.7"
-val catsEffectVersion = "3.3.12"
-val tapirVersion      = "0.20.2"
-val http4sVersion     = "0.23.12"
-val circeVersion      = "0.14.2"
+val fs2Version        = "3.3.0"
+val catsEffectVersion = "3.3.14"
+val tapirVersion      = "1.1.4"
+val http4sVersion     = "0.23.16"
+val blazeVersion      = "0.23.12"
+val circeVersion      = "0.14.3"
 val pureconfigVersion = "0.17.1"
-val scalaTestVersion  = "3.2.12"
+val scalaTestVersion  = "3.2.14"
 
 libraryDependencies ++= Seq(
   "org.slf4j" % "slf4j-api" % slf4jVersion,
@@ -38,10 +39,10 @@ libraryDependencies ++= Seq(
   "io.circe" %% "circe-core" % circeVersion,
   "io.circe" %% "circe-generic" % circeVersion,
   "io.circe" %% "circe-parser" % circeVersion,
-  "com.github.pureconfig" %% "pureconfig" % pureconfigVersion,
+  "com.github.pureconfig" %% "pureconfig-core" % pureconfigVersion,
   "org.scalatest" %% "scalatest" % scalaTestVersion % "test",
   "org.http4s" %% "http4s-dsl" % http4sVersion,
-  "org.http4s" %% "http4s-blaze-server" % http4sVersion,
+  "org.http4s" %% "http4s-blaze-server" % blazeVersion
 )
 
 scalacOptions ++= Seq(
