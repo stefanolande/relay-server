@@ -6,13 +6,13 @@ stages:
 build_test:
   stage: build_test
   interruptible: true
-  image: hseeberger/scala-sbt:11.0.13_1.5.7_2.13.7
+  image: sbtscala/scala-sbt:eclipse-temurin-17.0.4_1.7.1_3.2.0
   script:
     - sbt assembly
   artifacts:
     name: "radioware-relay-server-$CI_COMMIT_SHORT_SHA.jar"
     paths:
-      - target/scala-2.13/radioware-relay-server.jar
+      - target/scala-3.2.0/radioware-relay-server.jar
 
 dockerize:
   stage: dockerize
